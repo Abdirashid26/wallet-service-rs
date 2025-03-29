@@ -1,3 +1,4 @@
+use actix_web::{http, HttpRequest, HttpResponse, Responder};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -27,4 +28,23 @@ pub struct BlockedAmount{
     pub amount: f64,
     pub reason : Option<String>,
     pub created_at : NaiveDateTime
+}
+
+
+#[derive(Deserialize,Serialize,Debug)]
+pub struct UniversalResponse<T : Serialize>{
+    pub status : String,
+    pub message : String,
+    pub data : T,
+}
+
+
+impl <T : Serialize> Responder for UniversalResponse<T> {
+    type Body = actix_web::body::BoxBody;
+
+    fn respond_to(self, _req: &HttpRequest) -> HttpResponse<Self::Body> {
+        HttpResponse::build(http::StatusCode::OK)
+            .content_type("application/json")
+            .json(self)
+    }
 }
