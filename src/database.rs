@@ -1,6 +1,7 @@
 use std::env;
 use dotenvy::dotenv;
 use sqlx::{Pool, Postgres};
+use sqlx::postgres::PgPoolOptions;
 
 /**
 **
@@ -15,8 +16,10 @@ pub  async fn connect() -> Pool<Postgres>{
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
 
-    Pool::<Postgres>::connect(&database_url)
+    PgPoolOptions::new()
+        .max_connections(10) // MAX 10 CONNECTIONS AT A TIME
+        .connect(database_url.as_str())
         .await
-        .expect("Failed to connect to database") // expect will panic with our message
+        .expect("Failed to connect to database")
 
 }
