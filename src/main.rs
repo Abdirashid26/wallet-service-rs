@@ -2,7 +2,7 @@ use actix_web::{web, App, HttpServer, Responder, HttpResponse};
 use sqlx::PgPool;
 use dotenvy::dotenv;
 use std::env;
-use crate::handler::{create_account, delete_account, get_accounts, update_account};
+use crate::handler::{create_account, delete_account, get_accounts, update_account, update_balance};
 use crate::model::UniversalResponse;
 
 mod model;
@@ -22,6 +22,7 @@ async fn main() -> std::io::Result<()> {
             .route("/account/all",web::get().to(get_accounts))
             .route("/account/update",web::put().to(update_account))
             .route("/account/delete/{user_id}",web::delete().to(delete_account))
+            .route("/account/update/balance/{user_id}",web::patch().to(update_balance))
     })
         .bind("127.0.0.1:8080")?
         .run().await

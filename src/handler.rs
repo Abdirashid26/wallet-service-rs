@@ -1,8 +1,10 @@
+use std::result;
 use actix_web::web;
 use rust_decimal::Decimal;
-use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::prelude::{FromPrimitive, ToPrimitive, Zero};
 use sqlx::encode::IsNull::No;
-use sqlx::PgPool;
+use sqlx::{Error, PgPool};
+use sqlx::types::BigDecimal;
 use uuid::Uuid;
 use crate::model::{Account, CreateAccountDto, GetAccountDto, UniversalResponse, UpdateAccountDto};
 
@@ -153,20 +155,41 @@ pub async fn delete_account(
     let user_id = path.into_inner();
 
 
-    let account_exists = sqlx::query_scalar!(
-        "SELECT EXISTS(SELECT 1 FROM accounts WHERE user_id = $1)",
-        user_id
-    )
+    let account_exists = match sqlx::query_scalar!(
+    "SELECT EXISTS(SELECT 1 FROM accounts WHERE user_id = $1)",
+    user_id
+)
         .fetch_one(db_pool.get_ref())
-        .await
-        .unwrap_or(Option::from(false));
+        .await {
+        Ok(exists) => exists,
+        Err(error) => {
+            println!("Database error checking account existence: {:?}", error);
+            return UniversalResponse {
+                status: "01".to_string(),
+                message: "Failed to verify account existence".to_string(),
+                data: None,
+            };
+        }
+    };
 
-    if !account_exists.unwrap_or(false) {
-        return UniversalResponse {
-            status: "01".to_string(),
-            message: format!("Account with user_id {} not found", user_id),
-            data: None,
-        };
+    match account_exists {
+        Some(exists) => {
+            if !exists {
+                return UniversalResponse {
+                    status: "01".to_string(),
+                    message: format!("Account with user_id {} not found", user_id),
+                    data: None,
+                };
+            }
+        }
+
+        None => {
+            return UniversalResponse {
+                status: "01".to_string(),
+                message: format!("Account with user_id {} not found", user_id),
+                data: None,
+            };
+        }
     }
 
     let delete_account_result = sqlx::query!(
@@ -202,3 +225,94 @@ pub async fn delete_account(
 
 
 
+// update balance handler (use SQL TRANSACTION) -> does the ACID PRINCIPLES
+pub async fn update_balance(
+    db_pool : web::Data<PgPool>,
+    path : web::Path<String>,
+    update_account_dto: web::Json<UpdateAccountDto>
+) -> UniversalResponse<Option<GetAccountDto>>{
+    let user_id = path.into_inner();
+
+    // Get a transaction
+    let begin_result = db_pool.begin().await;
+
+    // start a transaction
+    let mut trx = match db_pool.begin().await {
+        Ok(trx) => trx,
+        Err(err) => {
+            println!("Error when trying to get a transaction reference: {:?}", err);
+            return UniversalResponse {
+                status: "01".to_string(),
+                message: "Failed to start database transaction".to_string(),
+                data: None
+            };
+        }
+    };
+
+    // Check if account exists
+    let account_balance = sqlx::query!(
+        "SELECT * FROM accounts WHERE user_id = $1 FOR UPDATE",
+        user_id
+    )
+        .fetch_one(&mut *trx).await;
+
+
+    match account_balance {
+        Ok(row) => {
+            let balance = row.balance;
+            let new_balance = balance.to_f64().unwrap_or(0.0) + update_account_dto.balance;
+
+            let decimal_balance = BigDecimal::from_f64(new_balance).unwrap_or_else(BigDecimal::zero);
+
+            let update_balance_result = sqlx::query!(
+                "UPDATE accounts SET balance  = $1 WHERE user_id = $2 RETURNING *",
+                decimal_balance,
+                user_id
+            ).fetch_one(&mut *trx).await;
+
+            match update_balance_result {
+                Ok(result) => {
+                    if let Err(_) = trx.commit().await {
+                        return  UniversalResponse{
+                            status  : "01".to_string(),
+                            message : "Failed to update the account balance".to_string(),
+                            data : None
+                        }
+                    }
+
+                    UniversalResponse{
+                        status : "01".to_string(),
+                        message : "Succesfully updated the account balance".to_string(),
+                        data : Some(
+                            GetAccountDto{
+                                balance : result.balance.to_f64().unwrap_or(0.0),
+                                status : result.status,
+                                user_id : result.user_id,
+                                account_id : result.id
+                            }
+                        )
+                    }
+                }
+                _ => {
+                    UniversalResponse{
+                        status  : "01".to_string(),
+                        message : "Failed to update the account balance".to_string(),
+                        data : None
+                    }
+                }
+            }
+
+        }
+
+        Err(err) => {
+            println!("Failed to fetch account balance [ACCOUNT DOES NOT EXIST]");
+            UniversalResponse{
+                status : "01".to_string(),
+                message : "Account not found".to_string(),
+                data : None
+            }
+        }
+    }
+
+
+}

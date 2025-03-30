@@ -78,4 +78,5 @@ pub struct GetAccountDto{
 pub struct UpdateAccountDto{
     pub user_id : String,
     pub status : String,
+    pub balance : f64,
 }
