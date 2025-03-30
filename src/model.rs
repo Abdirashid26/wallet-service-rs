@@ -10,6 +10,7 @@ use uuid::Uuid;
 * all of our models and dto's for our wallet services
 **/
 
+// BELLOW ARE THE MODELS (ENTITIES/TABLES)
 
 #[derive(Deserialize,Serialize,Debug,sqlx::FromRow)]
 pub struct Account{
@@ -31,6 +32,10 @@ pub struct BlockedAmount{
 }
 
 
+
+
+// BELLOW HERE ARE THE DTO'S
+
 #[derive(Deserialize,Serialize,Debug)]
 pub struct UniversalResponse<T : Serialize>{
     pub status : String,
@@ -47,4 +52,21 @@ impl <T : Serialize> Responder for UniversalResponse<T> {
             .content_type("application/json")
             .json(self)
     }
+}
+
+
+// create account request dto
+#[derive(Deserialize,Serialize,Debug)]
+pub struct CreateAccountDto{
+    pub user_id : String
+}
+
+
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct GetAccountDto{
+    pub user_id : String,
+    pub account_id : Uuid,
+    pub balance : f64,
+    pub status : String,
 }
