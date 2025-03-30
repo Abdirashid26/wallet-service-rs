@@ -1,6 +1,7 @@
 use actix_web::{http, HttpRequest, HttpResponse, Responder};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use rust_decimal::Decimal;
 use uuid::Uuid;
 
 /**
@@ -16,7 +17,7 @@ use uuid::Uuid;
 pub struct Account{
     pub id: Uuid,
     pub user_id : String,
-    pub balance : f64,
+    pub balance : Decimal,
     pub status : String,
     pub created_at : NaiveDateTime
 }
@@ -26,7 +27,7 @@ pub struct Account{
 pub struct BlockedAmount{
     pub id: String,
     pub account_id : Uuid,
-    pub amount: f64,
+    pub amount: Decimal,
     pub reason : Option<String>,
     pub created_at : NaiveDateTime
 }
@@ -68,5 +69,13 @@ pub struct GetAccountDto{
     pub user_id : String,
     pub account_id : Uuid,
     pub balance : f64,
+    pub status : String,
+}
+
+
+
+#[derive(Deserialize,Serialize)]
+pub struct UpdateAccountDto{
+    pub user_id : String,
     pub status : String,
 }
