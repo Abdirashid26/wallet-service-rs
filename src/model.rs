@@ -1,8 +1,10 @@
 use actix_web::{http, HttpRequest, HttpResponse, Responder};
-use chrono::NaiveDateTime;
+use bcrypt::{hash, DEFAULT_COST};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use rust_decimal::Decimal;
 use uuid::Uuid;
+
 
 /**
 **

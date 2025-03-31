@@ -11,6 +11,7 @@ mod handler;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    tracing_subscriber::fmt::init();
     dotenv().ok(); // loads for use the env file
     let pool = database::connect().await;
 

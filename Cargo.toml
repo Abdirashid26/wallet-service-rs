@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4.10.2"
+actix-identity = "0.8.0"  # For session management
+actix-web-httpauth = "0.8.2"  # For HTTP auth middleware
 tokio = {version = "1.44.1" , features = ["full"]}
 serde = {version = "1.0.219", features = ["default"]}
 rust_decimal = "1.37.1"
@@ -13,3 +15,8 @@ sqlx = {version = "0.8.3", features = ["postgres","runtime-tokio","macros","uuid
 dotenvy = "0.15.7"
 uuid = {version = "1.16.0", features = ["v4", "serde"]}
 chrono = {version = "0.4.40", features = ["serde"]}
+tracing = "0.1.41"
+tracing-subscriber = {version = "0.3.19", features = ["fmt", "json"]}
+axum = "0.8.3"
+json-web-token = "0.2.0"
+bcrypt = "0.17.0"
